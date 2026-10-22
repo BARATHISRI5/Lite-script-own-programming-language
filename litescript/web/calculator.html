@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteScript Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0c0c14;
+            --surface: #14141f;
+            --card: #1a1a28;
+            --card-hover: #20202f;
+            --border: #2a2a3d;
+            --text: #e8eaf0;
+            --text-dim: #8b8fa3;
+            --text-muted: #555770;
+            --accent: #6c5ce7;
+            --accent-light: #a29bfe;
+            --accent-glow: rgba(108, 92, 231, 0.35);
+            --green: #00cec9;
+            --green-glow: rgba(0, 206, 201, 0.3);
+            --orange: #fdcb6e;
+            --orange-glow: rgba(253, 203, 110, 0.2);
+            --red: #ff6b6b;
+            --pink: #fd79a8;
+            --radius: 16px;
+            --radius-btn: 14px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ── Ambient Background ─────────────────────────── */
+        .glow { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.07; pointer-events: none; z-index: 0; }
+        .glow-1 { width: 500px; height: 500px; top: -150px; left: -100px; background: var(--accent); }
+        .glow-2 { width: 400px; height: 400px; bottom: -100px; right: -50px; background: var(--green); }
+        .glow-3 { width: 300px; height: 300px; top: 40%; left: 60%; background: var(--pink); opacity: 0.05; }
+
+        /* ── Main Container ─────────────────────────────── */
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            animation: fadeUp 0.5s ease-out;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ─────────────────────────────────────── */
+        .header {
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ── Calculator Card ────────────────────────────── */
+        .calc {
+            width: 360px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 80px rgba(108,92,231,0.06);
+        }
+
+        /* ── Display ────────────────────────────────────── */
+        .display {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .display::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
+            opacity: 0.3;
+        }
+
+        .expression {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            word-break: break-all;
+            text-align: right;
+            min-height: 20px;
+            width: 100%;
+        }
+
+        .result {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 36px;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-all;
+            text-align: right;
+            width: 100%;
+            transition: color 0.2s ease;
+        }
+
+        .result.error {
+            color: var(--red);
+            font-size: 16px;
+        }
+
+        .result.computing {
+            animation: pulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ── Compiled Tag ───────────────────────────────── */
+        .compiled-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--green);
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .compiled-tag.show { opacity: 1; }
+
+        .compiled-tag .dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green-glow);
+        }
+
+        /* ── Button Grid ────────────────────────────────── */
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .btn {
+            height: 58px;
+            border: none;
+            border-radius: var(--radius-btn);
+            font-family: 'Inter', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
+            pointer-events: none;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Number buttons */
+        .btn-num {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .btn-num:hover { background: var(--card-hover); }
+
+        /* Operator buttons */
+        .btn-op {
+            background: rgba(108, 92, 231, 0.12);
+            color: var(--accent-light);
+            border: 1px solid rgba(108, 92, 231, 0.15);
+        }
+        .btn-op:hover {
+            background: rgba(108, 92, 231, 0.22);
+            border-color: rgba(108, 92, 231, 0.3);
+        }
+
+        /* Function buttons (AC, DEL) */
+        .btn-fn {
+            background: rgba(255, 107, 107, 0.1);
+            color: var(--red);
+            border: 1px solid rgba(255, 107, 107, 0.12);
+        }
+        .btn-fn:hover { background: rgba(255, 107, 107, 0.2); }
+
+        /* Equals button */
+        .btn-eq {
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            font-size: 22px;
+        }
+        .btn-eq:hover {
+            box-shadow: 0 6px 25px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+        .btn-eq:active { transform: scale(0.95) translateY(0); }
+
+        /* Span 2 columns */
+        .btn-wide { grid-column: span 2; }
+
+        /* ── LiteScript Code Preview ────────────────────── */
+        .code-preview {
+            margin-top: 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .code-preview.open {
+            max-height: 200px;
+        }
+
+        .code-preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-preview-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        .code-preview-body {
+            padding: 12px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--green);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        /* ── Toggle Button ──────────────────────────────── */
+        .toggle-code {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .toggle-code:hover {
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+
+        /* ── History ────────────────────────────────────── */
+        .history {
+            width: 360px;
+            max-height: 160px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .history::-webkit-scrollbar { width: 4px; }
+        .history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .history-item:hover {
+            background: var(--card);
+            border-color: rgba(108, 92, 231, 0.2);
+        }
+
+        .history-expr { color: var(--text-dim); }
+        .history-result { color: var(--accent-light); font-weight: 600; }
+
+        /* ── Nav Link ───────────────────────────────────── */
+        .nav-link {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-link:hover { color: var(--accent-light); }
+    </style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+
+<div class="container">
+    <div class="header">
+        <h1>⚡ LiteScript Calculator</h1>
+        <p>Every calculation is compiled to LLVM IR &amp; JIT-executed</p>
+    </div>
+
+    <div class="calc">
+        <!-- Display -->
+        <div class="display">
+            <div class="expression" id="expression"></div>
+            <div class="result" id="result">0</div>
+            <div class="compiled-tag" id="compiled-tag">
+                <span class="dot"></span>
+                Compiled via LLVM JIT
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="buttons">
+            <button class="btn btn-fn" onclick="clearAll()">AC</button>
+            <button class="btn btn-fn" onclick="backspace()">⌫</button>
+            <button class="btn btn-op" onclick="input('%')">%</button>
+            <button class="btn btn-op" onclick="input('/')">÷</button>
+
+            <button class="btn btn-num" onclick="input('7')">7</button>
+            <button class="btn btn-num" onclick="input('8')">8</button>
+            <button class="btn btn-num" onclick="input('9')">9</button>
+            <button class="btn btn-op" onclick="input('*')">×</button>
+
+            <button class="btn btn-num" onclick="input('4')">4</button>
+            <button class="btn btn-num" onclick="input('5')">5</button>
+            <button class="btn btn-num" onclick="input('6')">6</button>
+            <button class="btn btn-op" onclick="input('-')">−</button>
+
+            <button class="btn btn-num" onclick="input('1')">1</button>
+            <button class="btn btn-num" onclick="input('2')">2</button>
+            <button class="btn btn-num" onclick="input('3')">3</button>
+            <button class="btn btn-op" onclick="input('+')">+</button>
+
+            <button class="btn btn-num" onclick="input('(')">(</button>
+            <button class="btn btn-num" onclick="input('0')">0</button>
+            <button class="btn btn-num" onclick="input(')')">)</button>
+            <button class="btn btn-eq" onclick="calculate()">=</button>
+        </div>
+
+        <!-- Toggle Code Preview -->
+        <button class="toggle-code" id="toggle-code" onclick="toggleCode()">
+            ⟨/⟩ Show LiteScript Code
+        </button>
+
+        <!-- Code Preview -->
+        <div class="code-preview" id="code-preview">
+            <div class="code-preview-header">
+                <span class="code-preview-title">Generated LiteScript</span>
+            </div>
+            <div class="code-preview-body" id="code-body">
+                # Press = to see the compiled code
+            </div>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="history" id="history"></div>
+
+    <a href="/" class="nav-link">← Back to Playground</a>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────
+let expr = '';
+let history = [];
+
+const exprEl = document.getElementById('expression');
+const resultEl = document.getElementById('result');
+const tagEl = document.getElementById('compiled-tag');
+const codeBody = document.getElementById('code-body');
+const historyEl = document.getElementById('history');
+
+// ── Input ────────────────────────────────────────
+function input(ch) {
+    expr += ch;
+    updateDisplay();
+}
+
+function backspace() {
+    expr = expr.slice(0, -1);
+    updateDisplay();
+}
+
+function clearAll() {
+    expr = '';
+    resultEl.textContent = '0';
+    resultEl.className = 'result';
+    exprEl.textContent = '';
+    tagEl.classList.remove('show');
+    codeBody.textContent = '# Press = to see the compiled code';
+}
+
+function updateDisplay() {
+    // Show pretty version with math symbols
+    let pretty = expr
+        .replace(/\*/g, ' × ')
+        .replace(/\//g, ' ÷ ')
+        .replace(/\+/g, ' + ')
+        .replace(/-/g, ' − ')
+        .replace(/%/g, ' % ');
+    exprEl.textContent = pretty || '';
+    tagEl.classList.remove('show');
+}
+
+// ── Calculate via LiteScript Backend ─────────────
+async function calculate() {
+    if (!expr.trim()) return;
+
+    // Build LiteScript code
+    const lsCode = `let result = ${expr}\nsay result`;
+
+    // Show in code preview
+    codeBody.textContent = lsCode;
+
+    // Show computing state
+    resultEl.textContent = '...';
+    resultEl.className = 'result computing';
+
+    try {
+        const resp = await fetch('/api/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: lsCode })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            const output = data.output.trim();
+            resultEl.textContent = output;
+            resultEl.className = 'result';
+            tagEl.classList.add('show');
+
+            // Add to history
+            addHistory(expr, output);
+
+            // Move expression up, result stays
+            exprEl.textContent = formatExpr(expr) + ' =';
+            expr = output;
+        } else {
+            resultEl.textContent = data.error.split('\n')[0];
+            resultEl.className = 'result error';
+        }
+    } catch (err) {
+        resultEl.textContent = 'Connection error';
+        resultEl.className = 'result error';
+    }
+}
+
+function formatExpr(e) {
+    return e.replace(/\*/g, '×').replace(/\//g, '÷');
+}
+
+// ── History ──────────────────────────────────────
+function addHistory(expression, result) {
+    history.unshift({ expr: expression, result });
+    if (history.length > 10) history.pop();
+    renderHistory();
+}
+
+function renderHistory() {
+    historyEl.innerHTML = history.map(h =>
+        `<div class="history-item" onclick="loadHistory('${h.result}')">
+            <span class="history-expr">${formatExpr(h.expr)}</span>
+            <span class="history-result">= ${h.result}</span>
+        </div>`
+    ).join('');
+}
+
+function loadHistory(val) {
+    expr = val;
+    updateDisplay();
+    resultEl.textContent = val;
+}
+
+// ── Code Preview Toggle ─────────────────────────
+function toggleCode() {
+    const preview = document.getElementById('code-preview');
+    const btn = document.getElementById('toggle-code');
+    preview.classList.toggle('open');
+    btn.textContent = preview.classList.contains('open')
+        ? '⟨/⟩ Hide LiteScript Code'
+        : '⟨/⟩ Show LiteScript Code';
+}
+
+// ── Keyboard Support ─────────────────────────────
+document.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') input(e.key);
+    else if (['+', '-', '*', '/', '%', '(', ')'].includes(e.key)) input(e.key);
+    else if (e.key === 'Enter') calculate();
+    else if (e.key === 'Backspace') backspace();
+    else if (e.key === 'Escape') clearAll();
+});
+</script>
+</body>
+</html>

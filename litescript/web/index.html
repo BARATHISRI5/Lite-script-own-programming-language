@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteScript Playground</title>
+    <meta name="description" content="Write, compile, and run LiteScript programs in your browser">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ─── CSS RESET & VARIABLES ─────────────────────────────── */
+        *, *::before, *::after {
+            margin: 0; padding: 0; box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-panel: #16161f;
+            --bg-editor: #1a1a25;
+            --bg-hover: #1e1e2a;
+            --border: #2a2a3a;
+            --border-glow: #4f46e5;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --green: #22c55e;
+            --green-glow: rgba(34, 197, 94, 0.3);
+            --red: #ef4444;
+            --red-glow: rgba(239, 68, 68, 0.2);
+            --orange: #f59e0b;
+            --cyan: #06b6d4;
+            --pink: #ec4899;
+            --purple: #a855f7;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ─── AMBIENT BACKGROUND ────────────────────────────────── */
+        .bg-glow {
+            position: fixed;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .bg-glow-1 { top: -200px; left: -100px; background: var(--accent); }
+        .bg-glow-2 { bottom: -200px; right: -100px; background: var(--pink); }
+        .bg-glow-3 { top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--cyan); opacity: 0.04; }
+
+        /* ─── APP LAYOUT ────────────────────────────────────────── */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ─── HEADER / NAVBAR ───────────────────────────────────── */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: rgba(18, 18, 26, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--accent), var(--pink));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 2px 12px var(--accent-glow);
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-hover));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-hover);
+            border-radius: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ─── BUTTONS ───────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 2px 12px var(--green-glow);
+        }
+        .btn-run:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--green-glow);
+        }
+        .btn-run:active { transform: translateY(0); }
+
+        .btn-ir {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-hover);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+        .btn-ir:hover {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-tokens {
+            background: rgba(168, 85, 247, 0.12);
+            color: var(--purple);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        .btn-tokens:hover {
+            background: rgba(168, 85, 247, 0.22);
+            border-color: rgba(168, 85, 247, 0.35);
+        }
+
+        .btn-example {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--orange);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        .btn-example:hover {
+            background: rgba(245, 158, 11, 0.22);
+        }
+
+        .btn-icon {
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .btn.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* ─── MAIN CONTENT (SPLIT PANES) ────────────────────────── */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .pane {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pane-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .pane-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pane-title-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-blue { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+        .dot-green { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+
+        .divider {
+            width: 3px;
+            background: var(--border);
+            cursor: col-resize;
+            transition: background var(--transition);
+            position: relative;
+            flex-shrink: 0;
+        }
+        .divider:hover, .divider.active {
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        /* ─── CODE EDITOR ───────────────────────────────────────── */
+        .editor-wrap {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .line-numbers {
+            padding: 20px 0;
+            padding-right: 12px;
+            padding-left: 16px;
+            background: var(--bg-editor);
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            text-align: right;
+            user-select: none;
+            overflow: hidden;
+            min-width: 48px;
+            border-right: 1px solid var(--border);
+        }
+
+        .editor {
+            flex: 1;
+            padding: 20px;
+            background: var(--bg-editor);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            border: none;
+            outline: none;
+            resize: none;
+            tab-size: 4;
+            caret-color: var(--accent-hover);
+            overflow: auto;
+        }
+
+        .editor::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .editor::-webkit-scrollbar { width: 8px; height: 8px; }
+        .editor::-webkit-scrollbar-track { background: transparent; }
+        .editor::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        .editor::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* ─── OUTPUT PANEL ──────────────────────────────────────── */
+        .output-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-panel);
+        }
+
+        .output-tabs {
+            display: flex;
+            gap: 2px;
+            padding: 0 12px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .output-tab {
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .output-tab:hover { color: var(--text-secondary); }
+        .output-tab.active {
+            color: var(--accent-hover);
+            border-bottom-color: var(--accent);
+        }
+
+        .output-content {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .output-content::-webkit-scrollbar { width: 8px; }
+        .output-content::-webkit-scrollbar-track { background: transparent; }
+        .output-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .output-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-primary);
+        }
+
+        .output-text.error {
+            color: var(--red);
+        }
+
+        .output-text.ir-output {
+            color: var(--cyan);
+            font-size: 12px;
+        }
+
+        /* ─── EMPTY STATE ───────────────────────────────────────── */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 12px;
+            opacity: 0.4;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        /* ─── STATUS BAR ────────────────────────────────────────── */
+        .statusbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 20px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .status-left, .status-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ─── EXAMPLE DROPDOWN ──────────────────────────────────── */
+        .dropdown-wrap {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            min-width: 220px;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all var(--transition);
+        }
+
+        .dropdown-menu.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dropdown-item:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+        .dropdown-item:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+        .dropdown-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .dropdown-item-icon {
+            font-size: 14px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* ─── SPINNER ───────────────────────────────────────────── */
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── TOKEN TABLE ───────────────────────────────────────── */
+        .token-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .token-table th {
+            text-align: left;
+            padding: 8px 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 10px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--bg-panel);
+        }
+
+        .token-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid rgba(42,42,58,0.4);
+            color: var(--text-secondary);
+        }
+
+        .token-type {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .token-keyword { background: rgba(99,102,241,0.15); color: var(--accent-hover); }
+        .token-number { background: rgba(34,197,94,0.15); color: var(--green); }
+        .token-string { background: rgba(245,158,11,0.15); color: var(--orange); }
+        .token-operator { background: rgba(236,72,153,0.15); color: var(--pink); }
+        .token-punctuation { background: rgba(6,182,212,0.12); color: var(--cyan); }
+        .token-identifier { background: rgba(148,163,184,0.12); color: var(--text-secondary); }
+        .token-special { background: rgba(100,116,139,0.12); color: var(--text-muted); }
+
+        /* ─── KEYBOARD SHORTCUT BADGE ───────────────────────────── */
+        .kbd {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        /* ─── RESPONSIVE ────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .main { flex-direction: column; }
+            .divider { width: 100%; height: 3px; cursor: row-resize; }
+            .header { padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
+            .header-actions { flex-wrap: wrap; }
+        }
+
+        /* ─── FADE IN ANIMATION ─────────────────────────────────── */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .app { animation: fadeIn 0.4s ease-out; }
+
+        /* ─── TOAST NOTIFICATION ────────────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            right: 24px;
+            padding: 12px 20px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Ambient Glow Background -->
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+<div class="bg-glow bg-glow-3"></div>
+
+<div class="app">
+    <!-- ─── HEADER ─────────────────────────────────────────────── -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">LS</div>
+            <span class="logo-text">LiteScript Playground</span>
+            <span class="logo-badge">v1.0</span>
+        </div>
+        <div class="header-actions">
+            <div class="dropdown-wrap">
+                <button class="btn btn-example" id="btn-examples" onclick="toggleDropdown()">
+                    <span class="btn-icon">📂</span> Examples
+                </button>
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-item" onclick="loadExample('hello')">
+                        <span class="dropdown-item-icon">👋</span> Hello World
+                    </div>
+                    <div class="dropdown-item" onclick="loadExample('arithmetic')">
+                        <span class="dropdown-item-icon">🔢</span> Arithmetic
+                    </div>
+                    <div class="dropdown-item" onclick="loadExample('ifelse')">
+                        <span class="dropdown-item-icon">🔀</span> If / Else
+                    </div>
+                    <div class="dropdown-item" onclick="loadExample('loops')">
+                        <span class="dropdown-item-icon">🔁</span> Loops
+                    </div>
+                    <div class="dropdown-item" onclick="loadExample('functions')">
+                        <span class="dropdown-item-icon">⚡</span> Functions
+                    </div>
+                    <div class="dropdown-item" onclick="loadExample('factorial')">
+                        <span class="dropdown-item-icon">🧮</span> Recursive Factorial
+                    </div>
+                    <div class="dropdown-item" onclick="loadExample('full')">
+                        <span class="dropdown-item-icon">🚀</span> Full Demo
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-tokens" id="btn-tokens" onclick="getTokens()">
+                <span class="btn-icon">🔍</span> Tokens
+            </button>
+            <button class="btn btn-ir" id="btn-ir" onclick="emitIR()">
+                <span class="btn-icon">⚙️</span> LLVM IR
+            </button>
+            <button class="btn btn-run" id="btn-run" onclick="runCode()">
+                <span class="btn-icon">▶</span> Run <kbd>Ctrl+Enter</kbd>
+            </button>
+        </div>
+    </header>
+
+    <!-- ─── MAIN SPLIT PANES ───────────────────────────────────── -->
+    <div class="main">
+        <!-- Editor Pane -->
+        <div class="pane" id="editor-pane">
+            <div class="pane-header">
+                <span class="pane-title">
+                    <span class="pane-title-dot dot-blue"></span>
+                    Editor
+                </span>
+                <span style="font-size:11px;color:var(--text-muted)" id="char-count">0 chars</span>
+            </div>
+            <div class="editor-wrap">
+                <div class="line-numbers" id="line-numbers">1</div>
+                <textarea
+                    class="editor"
+                    id="editor"
+                    spellcheck="false"
+                    placeholder="# Write your LiteScript code here...&#10;&#10;let x = 42&#10;say x"
+                ></textarea>
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="divider" id="divider"></div>
+
+        <!-- Output Pane -->
+        <div class="pane" id="output-pane">
+            <div class="pane-header">
+                <span class="pane-title">
+                    <span class="pane-title-dot dot-green"></span>
+                    Output
+                </span>
+                <button class="btn btn-ir" style="padding:5px 12px;font-size:11px" onclick="clearOutput()">Clear</button>
+            </div>
+            <div class="output-tabs">
+                <div class="output-tab active" data-tab="output" onclick="switchTab('output')">Output</div>
+                <div class="output-tab" data-tab="ir" onclick="switchTab('ir')">LLVM IR</div>
+                <div class="output-tab" data-tab="tokens" onclick="switchTab('tokens')">Tokens</div>
+            </div>
+            <div class="output-wrap">
+                <div class="output-content" id="output-panel">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🚀</div>
+                        <div class="empty-state-text">Click Run to execute your code</div>
+                        <div class="empty-state-hint">or press Ctrl + Enter</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── STATUS BAR ─────────────────────────────────────────── -->
+    <div class="statusbar">
+        <div class="status-left">
+            <span class="status-item">
+                <span class="status-dot"></span>
+                Ready
+            </span>
+            <span class="status-item" id="status-line">Ln 1, Col 1</span>
+        </div>
+        <div class="status-right">
+            <span class="status-item">LiteScript</span>
+            <span class="status-item">LLVM JIT</span>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────────────
+let currentTab = 'output';
+const outputData = { output: '', ir: '', tokens: '' };
+
+// ─── ELEMENTS ───────────────────────────────────────────────────
+const editor       = document.getElementById('editor');
+const lineNumbers  = document.getElementById('line-numbers');
+const outputPanel  = document.getElementById('output-panel');
+const btnRun       = document.getElementById('btn-run');
+const btnIR        = document.getElementById('btn-ir');
+const btnTokens    = document.getElementById('btn-tokens');
+const charCount    = document.getElementById('char-count');
+const statusLine   = document.getElementById('status-line');
+
+// ─── LINE NUMBERS ───────────────────────────────────────────────
+function updateLineNumbers() {
+    const lines = editor.value.split('\n').length;
+    let html = '';
+    for (let i = 1; i <= lines; i++) html += i + '\n';
+    lineNumbers.textContent = html;
+    charCount.textContent = editor.value.length + ' chars';
+}
+
+editor.addEventListener('input', updateLineNumbers);
+editor.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = editor.scrollTop;
+});
+
+// Update cursor position in status bar
+editor.addEventListener('keyup', updateCursorPos);
+editor.addEventListener('click', updateCursorPos);
+
+function updateCursorPos() {
+    const val = editor.value.substring(0, editor.selectionStart);
+    const lines = val.split('\n');
+    const ln = lines.length;
+    const col = lines[lines.length - 1].length + 1;
+    statusLine.textContent = `Ln ${ln}, Col ${col}`;
+}
+
+// ─── TAB SUPPORT IN EDITOR ──────────────────────────────────────
+editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 4;
+        updateLineNumbers();
+    }
+
+    // Ctrl+Enter to run
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        runCode();
+    }
+});
+
+// ─── API CALLS ──────────────────────────────────────────────────
+async function runCode() {
+    const code = editor.value;
+    if (!code.trim()) { showToast('⚠️ Write some code first!'); return; }
+
+    setLoading(btnRun, true);
+    try {
+        const resp = await fetch('/api/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            outputData.output = data.output || '(no output)';
+            switchTab('output');
+            renderOutput('output');
+            showToast('✅ Program executed successfully!');
+        } else {
+            outputData.output = data.error;
+            switchTab('output');
+            renderOutput('output', true);
+            showToast('❌ Compilation failed');
+        }
+    } catch (err) {
+        outputData.output = 'Network error: ' + err.message;
+        renderOutput('output', true);
+    }
+    setLoading(btnRun, false);
+}
+
+async function emitIR() {
+    const code = editor.value;
+    if (!code.trim()) { showToast('⚠️ Write some code first!'); return; }
+
+    setLoading(btnIR, true);
+    try {
+        const resp = await fetch('/api/ir', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            outputData.ir = data.ir;
+            switchTab('ir');
+            renderOutput('ir');
+            showToast('✅ LLVM IR generated!');
+        } else {
+            outputData.ir = data.error;
+            switchTab('ir');
+            renderOutput('ir', true);
+        }
+    } catch (err) {
+        outputData.ir = 'Network error: ' + err.message;
+        renderOutput('ir', true);
+    }
+    setLoading(btnIR, false);
+}
+
+async function getTokens() {
+    const code = editor.value;
+    if (!code.trim()) { showToast('⚠️ Write some code first!'); return; }
+
+    setLoading(btnTokens, true);
+    try {
+        const resp = await fetch('/api/tokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            outputData.tokens = renderTokenTable(data.tokens);
+            switchTab('tokens');
+            outputPanel.innerHTML = outputData.tokens;
+            showToast('✅ Tokenization complete!');
+        } else {
+            outputData.tokens = data.error;
+            switchTab('tokens');
+            renderOutput('tokens', true);
+        }
+    } catch (err) {
+        outputData.tokens = 'Network error: ' + err.message;
+        renderOutput('tokens', true);
+    }
+    setLoading(btnTokens, false);
+}
+
+// ─── TOKEN TABLE RENDERER ───────────────────────────────────────
+function renderTokenTable(tokens) {
+    const keywords = ['LET','SAY','IF','ELSE','LOOP','TIMES','FUNC','GIVE'];
+    const operators = ['PLUS','MINUS','STAR','SLASH','PERCENT','GT','LT','GTE','LTE','EQEQ','NEQ'];
+    const punctuation = ['LPAREN','RPAREN','LBRACE','RBRACE','COMMA','EQUALS'];
+
+    function getClass(type) {
+        if (keywords.includes(type)) return 'token-keyword';
+        if (type === 'NUMBER') return 'token-number';
+        if (type === 'STRING') return 'token-string';
+        if (operators.includes(type)) return 'token-operator';
+        if (punctuation.includes(type)) return 'token-punctuation';
+        if (type === 'IDENTIFIER') return 'token-identifier';
+        return 'token-special';
+    }
+
+    let html = '<table class="token-table"><thead><tr><th>#</th><th>Type</th><th>Value</th><th>Line</th><th>Col</th></tr></thead><tbody>';
+    tokens.forEach((t, i) => {
+        const val = t.value.replace(/</g,'&lt;').replace(/>/g,'&gt;') || '—';
+        html += `<tr>
+            <td style="color:var(--text-muted)">${i+1}</td>
+            <td><span class="token-type ${getClass(t.type)}">${t.type}</span></td>
+            <td style="color:var(--text-primary)">${val}</td>
+            <td>${t.line}</td>
+            <td>${t.col}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+// ─── OUTPUT RENDERING ───────────────────────────────────────────
+function renderOutput(tab, isError = false) {
+    const content = outputData[tab] || '';
+    let cls = 'output-text';
+    if (isError) cls += ' error';
+    if (tab === 'ir') cls += ' ir-output';
+    outputPanel.innerHTML = `<pre class="${cls}">${escapeHtml(content)}</pre>`;
+}
+
+function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function clearOutput() {
+    outputData.output = ''; outputData.ir = ''; outputData.tokens = '';
+    outputPanel.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">🚀</div>
+        <div class="empty-state-text">Click Run to execute your code</div>
+        <div class="empty-state-hint">or press Ctrl + Enter</div>
+    </div>`;
+}
+
+// ─── TABS ───────────────────────────────────────────────────────
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.output-tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tab);
+    });
+    if (tab === 'tokens' && outputData.tokens.startsWith('<table')) {
+        outputPanel.innerHTML = outputData.tokens;
+    } else if (outputData[tab]) {
+        renderOutput(tab);
+    }
+}
+
+// ─── LOADING STATE ──────────────────────────────────────────────
+function setLoading(btn, loading) {
+    if (loading) {
+        btn.classList.add('loading');
+        btn.dataset.origHtml = btn.innerHTML;
+        const label = btn.textContent.trim().split('\n')[0];
+        btn.innerHTML = `<div class="spinner"></div> Running...`;
+    } else {
+        btn.classList.remove('loading');
+        if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+    }
+}
+
+// ─── EXAMPLES ───────────────────────────────────────────────────
+const EXAMPLES = {
+    hello: `# Hello World\nlet x = 42\nsay "Hello from LiteScript!"\nsay x`,
+    arithmetic: `# Arithmetic Operations\nlet a = 20\nlet b = 7\n\nsay "Addition:"\nsay a + b\n\nsay "Subtraction:"\nsay a - b\n\nsay "Multiplication:"\nsay a * b\n\nsay "Division:"\nsay a / b\n\nsay "Modulo:"\nsay a % b`,
+    ifelse: `# Conditionals\nlet temperature = 35\n\nif temperature > 30 {\n    say "It's hot outside!"\n} else {\n    say "It's cool outside"\n}\n\nlet score = 92\nif score >= 90 {\n    say "Grade: A"\n} else {\n    say "Keep trying!"\n}`,
+    loops: `# Loops\nsay "Counting to 5:"\nloop 5 times {\n    say "tick!"\n}\n\nsay "Blast off!"`,
+    functions: `# Functions\nfunc add(a, b) {\n    give a + b\n}\n\nfunc square(n) {\n    give n * n\n}\n\nfunc max(x, y) {\n    if x > y {\n        give x\n    } else {\n        give y\n    }\n}\n\nlet result = add(10, 20)\nsay "10 + 20 ="\nsay result\n\nsay "7 squared ="\nsay square(7)\n\nsay "Max of 42 and 17:"\nsay max(42, 17)`,
+    factorial: `# Recursive Factorial\nfunc factorial(n) {\n    if n <= 1 {\n        give 1\n    }\n    give n * factorial(n - 1)\n}\n\nsay "5! ="\nsay factorial(5)\n\nsay "10! ="\nsay factorial(10)`,
+    full: `# Full LiteScript Demo\nsay "=== Variables ==="\nlet x = 5\nlet y = 10\nsay x + y\n\nsay "=== Strings ==="\nsay "Hello from LiteScript!"\n\nsay "=== If/Else ==="\nlet score = 85\nif score >= 90 {\n    say "Grade: A"\n} else {\n    say "Grade: B or lower"\n}\n\nsay "=== Loops ==="\nloop 3 times {\n    say "Looping!"\n}\n\nsay "=== Functions ==="\nfunc square(n) {\n    give n * n\n}\nsay square(7)\n\nfunc factorial(n) {\n    if n <= 1 {\n        give 1\n    }\n    give n * factorial(n - 1)\n}\nsay factorial(5)\n\nsay "=== Done! ==="`,
+};
+
+function loadExample(name) {
+    editor.value = EXAMPLES[name] || '';
+    updateLineNumbers();
+    toggleDropdown();
+    showToast(`📂 Loaded: ${name}`);
+}
+
+// ─── DROPDOWN ───────────────────────────────────────────────────
+function toggleDropdown() {
+    document.getElementById('dropdown-menu').classList.toggle('open');
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-wrap')) {
+        document.getElementById('dropdown-menu').classList.remove('open');
+    }
+});
+
+// ─── TOAST ──────────────────────────────────────────────────────
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ─── DIVIDER DRAG ───────────────────────────────────────────────
+const divider = document.getElementById('divider');
+const editorPane = document.getElementById('editor-pane');
+const outputPaneEl = document.getElementById('output-pane');
+let isDragging = false;
+
+divider.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    divider.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const container = document.querySelector('.main');
+    const rect = container.getBoundingClientRect();
+    const pct = ((e.clientX - rect.left) / rect.width) * 100;
+    if (pct > 20 && pct < 80) {
+        editorPane.style.flex = 'none';
+        editorPane.style.width = pct + '%';
+        outputPaneEl.style.flex = '1';
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+    divider.classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+});
+
+// ─── INIT ───────────────────────────────────────────────────────
+updateLineNumbers();
+</script>
+</body>
+</html>
